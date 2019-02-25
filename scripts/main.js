@@ -72,14 +72,183 @@ class Dealer {
 		/* Returns a random integer in the interval [low, high) */
 		return Math.floor((Math.random() * high) + low);
 	}
+	
+	dealHands(players) {
+		for (var i = 0; i < players.length; i++) {
+			players[i].hand = [];
+			this.dealCards(2, players[i].hand);
+		}
+	}
+	
+	dealFlop(communityCards) {
+		communityCards = [];
+		this.dealCards(3, communityCards);
+	}
+	
+	dealTurn(communityCards) {
+		this.dealCards(1, communityCards);
+	}
+	
+	dealRiver(communityCards) {
+		this.dealCards(1, communityCards);
+	}
+	
 }
 
 class Player {
-	constructor(name, chips) {
+	constructor(name, chips, control) {
 		this.name = name;
 		this.chips = chips;
 		this.hand = [];
+		this.control = control;
+		this.hasFolded = false;
+		this.moveDone = false;
 	}
+	
+	collectChips(numChips) {
+		this.chips += numChips;
+	}
+	
+	removeChips(numChips) {
+		this.chips -= numChips;
+		if (this.chips < 0) {
+			numChips += this.chips;
+			this.chips = 0;
+		}
+		
+		return numChips;
+	}
+	
+	fold() {
+		this.hasFolded = true;
+		this.moveDone = true;
+	}
+	
+	check() {
+		this.moveDone = true;
+	}
+	
+	call(table) {
+		this.removeChips(table.currentBet);
+		table.pot += table.currentBet;
+		this.moveDone = true;
+	}
+	
+	raise(numChips, table) {
+		numChips = this.removeChips(numChips);
+		table.pot += numChips;
+		table.currentBet += numChips;
+		this.moveDone = true;
+	}
+	
+	getCPUAction() {
+		this.fold();
+	}
+}
+
+class Table {
+	constructor() {
+		this.players = [];
+		this.dealer = new Dealer();
+		this.communityCards = [];
+		this.pot = 0;
+		this.smallBlind = 50;
+		this.bigBlind = 100;
+		this.currentBet = 0;
+		this.currentActivePlayerIndex = null;
+	}
+	
+	addPlayer(player) {
+		this.players.push(player);
+	}
+	
+	setBlinds(smallBlind, bigBlind) {
+		this.smallBlind = smallBlind;
+		this.bigBlind = bigBlind;
+	}
+	
+	playRound() {
+		/* Starts a new round */
+		this.currentBet = this.bigBlind;
+		this.dealer.dealHands(this.players);
+		this.startNextPlayerTurn();
+	}
+	
+	getCurrentPlayer() {
+		if (this.currentPlayer == null) {
+			return null;
+		} else { 
+			return this.players[this.currentPlayer];
+		}
+	}
+	
+	startNextPlayerTurn() {
+		if (this.currentPlayer == null) this.currentPlayer = 0;
+		var player = this.getCurrentPlayer();
+		
+		if (player.control == "CPU") player.getCPUAction();
+		if (player.moveDone) this.currentPlayer++;
+		if (this.currentPlayer >= this.players.length) {
+			this.getRoundWinner();
+		}
+	}
+	
+	getPlayerActions() {
+		/* Asks each player to either check, fold, or raise */
+		var action;
+		for (var i = 0; i < this.players.length; i++) {
+			if (players[i].control == CPU) {
+				this.currentActivePlayer = players[i];
+				action = this.currentActivePlayer.getCPUAction();
+			} else {
+				action = players[i].getManualAction();
+			}
+		}
+	}
+}
+
+var elements = {
+	"foldButton" : getElement("#foldButton"),
+	"checkButton" : getElement("#checkButton"),
+	"callButton" : getElement("#callButton"),
+	"raiseButton" : getElement("#raiseButton"),
+	
+}
+
+function getElement(name) {
+	return document.querySelector(name);
+}
+
+function setUpElements() {
+	elements.foldButton.onclick = e => {
+		if (table.getCurrentPlayer() != null) {
+			table.getCurrentPlayer().fold();
+			console.log(table.getCurrentPlayer().name + " has folded");
+		}
+	}
+	
+	elements.checkButton.onclick = e => {
+		if (table.getCurrentPlayer() != null) {
+			table.getCurrentPlayer().check();
+			console.log(table.getCurrentPlayer().name + " has checked");
+		}
+	}
+
+	elements.callButton.onclick = e => {
+		if (table.getCurrentPlayer() != null) {
+			table.getCurrentPlayer().call(table);
+			console.log(table.getCurrentPlayer().name + " has called");
+		}
+	}
+	
+	elements.raiseButton.onclick = e => {
+		if (table.getCurrentPlayer() != null) {
+			table.getCurrentPlayer().raise(100, table);
+			console.log(table.getCurrentPlayer().name + " has raised");
+		}
+	}
+	
+	
 }
 
 var dealer = new Dealer();
@@ -93,6 +262,13 @@ console.log("Community Cards: " + dealer.getCardSequenceString(communityCards));
 console.log(`${p1.name}'s hand: ` + dealer.getCardSequenceString(p1.hand));
 console.log(`${p2.name}'s hand: ` + dealer.getCardSequenceString(p2.hand));
 console.log(`Cards left: ${dealer.deck.cards.length}`);
+
+setUpElements();
+var table = new Table();
+table.addPlayer(new Player("P1", 100, "Manual"));
+table.addPlayer(new Player("P2", 100, "CPU"));
+table.addPlayer(new Player("P3", 100, "CPU"));
+table.playRound();
 
 
 
