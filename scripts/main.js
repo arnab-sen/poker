@@ -47,6 +47,10 @@ class Dealer {
 		this.deck = new Deck();
 	}
 	
+	resetDeck() {
+		this.deck = new Deck();
+	}
+	
 	dealCards(numCards, container) {
 		/* Randomly selects and moves a given number of cards to the container */
 		var cardsDealt = [];
@@ -170,6 +174,7 @@ class Table {
 	playRound() {
 		/* Starts a new round */
 		this.currentBet = this.bigBlind;
+		this.dealer.resetDeck();
 		this.dealer.dealHands(this.players);
 		this.startNextPlayerTurn();
 	}
@@ -247,8 +252,6 @@ function setUpElements() {
 			console.log(table.getCurrentPlayer().name + " has raised");
 		}
 	}
-	
-	
 }
 
 var dealer = new Dealer();
