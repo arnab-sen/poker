@@ -216,8 +216,7 @@ var elements = {
 	"foldButton" : getElement("#foldButton"),
 	"checkButton" : getElement("#checkButton"),
 	"callButton" : getElement("#callButton"),
-	"raiseButton" : getElement("#raiseButton"),
-	
+	"raiseButton" : getElement("#raiseButton")
 }
 
 function getElement(name) {
@@ -253,18 +252,6 @@ function setUpElements() {
 		}
 	}
 }
-
-var dealer = new Dealer();
-var p1 = new Player("P1");
-var p2 = new Player("P2");
-var communityCards = [];
-dealer.dealCards(2, p1.hand);
-dealer.dealCards(2, p2.hand);
-dealer.dealCards(5, communityCards);
-console.log("Community Cards: " + dealer.getCardSequenceString(communityCards));
-console.log(`${p1.name}'s hand: ` + dealer.getCardSequenceString(p1.hand));
-console.log(`${p2.name}'s hand: ` + dealer.getCardSequenceString(p2.hand));
-console.log(`Cards left: ${dealer.deck.cards.length}`);
 
 setUpElements();
 var table = new Table();
