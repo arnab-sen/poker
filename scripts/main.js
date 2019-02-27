@@ -107,6 +107,7 @@ class Player {
 		this.control = control;
 		this.hasFolded = false;
 		this.moveDone = false;
+		this.currentBet = 0;
 	}
 	
 	collectChips(numChips) {
@@ -123,30 +124,38 @@ class Player {
 		return numChips;
 	}
 	
-	fold() {
+	fold(table) {
 		this.hasFolded = true;
 		this.moveDone = true;
-	}
-	
-	check() {
-		this.moveDone = true;
+		console.log(table.getCurrentPlayer().name + " has folded");
+		if (this.control != "CPU") table.startNextPlayerTurn();
 	}
 	
 	call(table) {
+		/* Call or check (call 0 chips) */
 		this.removeChips(table.currentBet);
-		table.pot += table.currentBet;
+		if (this.currentBet != table.currentBet) {
+			table.pot += table.currentBet;
+			this.currentBet = table.currentBet;
+			console.log(table.getCurrentPlayer().name + " has called");
+		} else {
+			console.log(table.getCurrentPlayer().name + " has checked");
+		}
 		this.moveDone = true;
+		if (this.control != "CPU") table.startNextPlayerTurn();
 	}
 	
-	raise(numChips, table) {
+	raise(table, numChips) {
 		numChips = this.removeChips(numChips);
 		table.pot += numChips;
 		table.currentBet += numChips;
 		this.moveDone = true;
+		console.log(table.getCurrentPlayer().name + " has raised " + numChips);
+		if (this.control != "CPU") table.startNextPlayerTurn();
 	}
 	
-	getCPUAction() {
-		this.fold();
+	getCPUAction(table) {
+		this.fold(table);
 	}
 }
 
@@ -182,39 +191,59 @@ class Table {
 	getCurrentPlayer() {
 		if (this.currentPlayer == null) {
 			return null;
+		} else if (this.currentPlayer >= this.players.length) { 
+			return this.players[0];
 		} else { 
 			return this.players[this.currentPlayer];
 		}
+		
 	}
 	
 	startNextPlayerTurn() {
-		if (this.currentPlayer == null) this.currentPlayer = 0;
+		if (this.currentPlayer == null) this.currentPlayer = -1;
+		this.currentPlayer++;
 		var player = this.getCurrentPlayer();
-		
-		if (player.control == "CPU") player.getCPUAction();
-		if (player.moveDone) this.currentPlayer++;
-		if (this.currentPlayer >= this.players.length) {
-			this.getRoundWinner();
+		console.log(player.name + "'s turn");
+		console.log(player.control);
+		while (player.control == "CPU") {
+			player.getCPUAction(this);
+			this.currentPlayer++;
+			player = this.getCurrentPlayer();
 		}
+		
+		if (player.currentBet == table.currentBet) {
+			elements.callButton.textContent = "Check";
+		} else {
+			elements.callButton.textContent = "Call " + this.currentBet;
+		}
+		if (player.moveDone) this.currentPlayer++;
+		if (this.roundComplete()) this.getRoundWinner();
+		
+		console.log(player.name, player.moveDone, player.currentBet, table.currentBet);
 	}
 	
-	getPlayerActions() {
-		/* Asks each player to either check, fold, or raise */
-		var action;
+	roundComplete() {
+		/* Check if all players have completed thir moves */
 		for (var i = 0; i < this.players.length; i++) {
-			if (players[i].control == CPU) {
-				this.currentActivePlayer = players[i];
-				action = this.currentActivePlayer.getCPUAction();
-			} else {
-				action = players[i].getManualAction();
+			if (this.players[i].hasFolded) continue;
+			if (!(this.players[i].moveDone) || 
+			(this.players[i].currentBet != this.currentBet)) { 
+				console.log(this.players[i].name, this.players[i].currentBet, this.currentBet);
+				return false;
 			}
 		}
+		
+		console.log("Round complete");
+		return true;
+	}
+	
+	getRoundWinner() {
+		
 	}
 }
 
 var elements = {
 	"foldButton" : getElement("#foldButton"),
-	"checkButton" : getElement("#checkButton"),
 	"callButton" : getElement("#callButton"),
 	"raiseButton" : getElement("#raiseButton")
 }
@@ -226,29 +255,19 @@ function getElement(name) {
 function setUpElements() {
 	elements.foldButton.onclick = e => {
 		if (table.getCurrentPlayer() != null) {
-			table.getCurrentPlayer().fold();
-			console.log(table.getCurrentPlayer().name + " has folded");
-		}
-	}
-	
-	elements.checkButton.onclick = e => {
-		if (table.getCurrentPlayer() != null) {
-			table.getCurrentPlayer().check();
-			console.log(table.getCurrentPlayer().name + " has checked");
+			table.getCurrentPlayer().fold(table);
 		}
 	}
 
 	elements.callButton.onclick = e => {
 		if (table.getCurrentPlayer() != null) {
 			table.getCurrentPlayer().call(table);
-			console.log(table.getCurrentPlayer().name + " has called");
 		}
 	}
 	
 	elements.raiseButton.onclick = e => {
 		if (table.getCurrentPlayer() != null) {
-			table.getCurrentPlayer().raise(100, table);
-			console.log(table.getCurrentPlayer().name + " has raised");
+			table.getCurrentPlayer().raise(table, 100);
 		}
 	}
 }
