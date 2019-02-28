@@ -128,7 +128,7 @@ class Player {
 		this.hasFolded = true;
 		this.moveDone = true;
 		console.log(table.getCurrentPlayer().name + " has folded");
-		if (this.control != "CPU") table.startNextPlayerTurn();
+		if (table.getCurrentPlayer().control != "CPU") table.startNextPlayerTurn();
 	}
 	
 	call(table) {
@@ -142,7 +142,7 @@ class Player {
 			console.log(table.getCurrentPlayer().name + " has checked");
 		}
 		this.moveDone = true;
-		if (this.control != "CPU") table.startNextPlayerTurn();
+		if (table.getCurrentPlayer().control != "CPU") table.startNextPlayerTurn();
 	}
 	
 	raise(table, numChips) {
@@ -151,11 +151,11 @@ class Player {
 		table.currentBet += numChips;
 		this.moveDone = true;
 		console.log(table.getCurrentPlayer().name + " has raised " + numChips);
-		if (this.control != "CPU") table.startNextPlayerTurn();
+		if (table.getCurrentPlayer().control != "CPU") table.startNextPlayerTurn();
 	}
 	
 	getCPUAction(table) {
-		this.fold(table);
+		this.call(table);
 	}
 }
 
@@ -186,6 +186,7 @@ class Table {
 		this.dealer.resetDeck();
 		this.dealer.dealHands(this.players);
 		this.startNextPlayerTurn();
+		console.log("Turn done");
 	}
 	
 	getCurrentPlayer() {
@@ -200,15 +201,26 @@ class Table {
 	}
 	
 	startNextPlayerTurn() {
+		console.log("startNextPlayerTurn() has been called");
 		if (this.currentPlayer == null) this.currentPlayer = -1;
 		this.currentPlayer++;
 		var player = this.getCurrentPlayer();
 		console.log(player.name + "'s turn");
 		console.log(player.control);
-		while (player.control == "CPU") {
+		console.log(player.control == "CPU");
+		
+		var loopCount = 0;
+		while ((player.control == "CPU") && (!player.moveDone)) {
+			console.log(player.name, "auto");
 			player.getCPUAction(this);
 			this.currentPlayer++;
 			player = this.getCurrentPlayer();
+			console.log("Changed players to", player.name)
+			loopCount++;
+			if (loopCount > 1000) {
+				console.log("Infinite loop detected");
+				return;
+			}
 		}
 		
 		if (player.currentBet == table.currentBet) {
@@ -216,10 +228,15 @@ class Table {
 		} else {
 			elements.callButton.textContent = "Call " + this.currentBet;
 		}
-		if (player.moveDone) this.currentPlayer++;
+		if (player.control == "Manual") {
+			console.log("Returning");
+			return;
+		}
+		if (player.moveDone) {
+			console.log(player.name, "move done")
+			this.currentPlayer++;
+		}
 		if (this.roundComplete()) this.getRoundWinner();
-		
-		console.log(player.name, player.moveDone, player.currentBet, table.currentBet);
 	}
 	
 	roundComplete() {
@@ -238,7 +255,7 @@ class Table {
 	}
 	
 	getRoundWinner() {
-		
+		return;
 	}
 }
 
@@ -274,6 +291,7 @@ function setUpElements() {
 
 setUpElements();
 var table = new Table();
+table.addPlayer(new Player("P0", 100, "CPU"));
 table.addPlayer(new Player("P1", 100, "Manual"));
 table.addPlayer(new Player("P2", 100, "CPU"));
 table.addPlayer(new Player("P3", 100, "CPU"));
